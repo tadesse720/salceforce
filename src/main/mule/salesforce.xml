@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0710ddcf-b6e1-4207-ba4d-a1012469f059" >
+		<http:listener-connection host="localhost" port="9001" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="b582323b-fa66-4ec3-bc67-7ecb83b02033" >
+		<salesforce:cached-basic-connection username="taye75@yahoo.com" password="7202086515tg" securityToken="Gxf39RElQ9hpFRa69jUWsPNP" />
+	</salesforce:sfdc-config>
+	<flow name="salesforceFlow" doc:id="ef0bf673-0337-4d28-bd0c-3539a6adb3b2" >
+		<http:listener doc:name="Listener" doc:id="e69d4bff-9a5c-4cb2-a5a6-250f9f9f4564" config-ref="HTTP_Listener_config" path="/"/>
+		<salesforce:query doc:name="Query" doc:id="378d02d6-836f-4201-b4f9-d478a4090662" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query >select name,empid__c,salary__c from employee__c where name=':name'</salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"name" : message.attributes.queryParams.ename
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="b8cc0283-c7d0-432c-abbb-2727b025ee74">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map (payload,indexpayload)->{
+	
+	empid__c:payload.Empid__c, 
+	name:payload .Name, 
+	salary__c:payload .Salary__c 
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:delete doc:name="Delete" doc:id="68db86f5-9a48-43b8-aa3a-ec8d97ec1f02" config-ref="Salesforce_Config">
+			<salesforce:delete-ids ><![CDATA[#[payload.empid__c]]]></salesforce:delete-ids>
+		</salesforce:delete>
+		<set-payload value="record delete succssefully" doc:name="Set Payload" doc:id="7ba55555-8c11-49f0-87ee-ec235258092c" />
+	</flow>
+</mule>
